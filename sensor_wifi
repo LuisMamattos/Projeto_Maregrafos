@@ -1,0 +1,68 @@
+#include <WiFi.h>
+
+const char* ssid = "SUA_REDE_WIFI"; // Insira o nome da sua rede WiFi
+const char* password = "SUA_SENHA_WIFI"; // Insira a senha da sua rede WiFi
+
+const char* host = "SEU_HOST_OU_IP"; // Insira o endereço IP ou o host do servidor onde você deseja enviar os dados
+const int port = 80; // Porta do servidor HTTP
+
+const int triggerPin = 13; // Pino de trigger do sensor ultrassônico
+const int echoPin = 12; // Pino de eco do sensor ultrassônico
+
+long duration;
+int distance;
+
+WiFiClient client;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(triggerPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  // Conecta-se à rede WiFi
+  Serial.println();
+  Serial.println();
+  Serial.print("Conectando à rede WiFi ");
+  Serial.println(ssid);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi conectado");
+  Serial.println("Endereço IP: ");
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Mede a distância usando o sensor ultrassônico
+  digitalWrite(triggerPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(triggerPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(triggerPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
+  distance = duration * 0.034 / 2;
+
+  // Envia os dados por WiFi
+  if (client.connect(host, port)) {
+    Serial.println("Conectado ao servidor");
+    client.print("GET /update?level=");
+    client.print(distance);
+    client.println(" HTTP/1.1");
+    client.print("Host: ");
+    client.println(host);
+    client.println("Connection: close");
+    client.println();
+    client.stop();
+    Serial.println("Dados enviados com sucesso");
+  } else {
+    Serial.println("Falha na conexão com o servidor");
+  }
+
+  delay(5000); // Aguarda 5 segundos antes de enviar novamente
+}
