@@ -1,18 +1,17 @@
 #include <WiFi.h>
+#include <HTTPClient.h>
 
-const char* ssid = "SUA_REDE_WIFI"; // Insira o nome da sua rede WiFi
-const char* password = "SUA_SENHA_WIFI"; // Insira a senha da sua rede WiFi
+const char* ssid = "(-_-)"; // Nome da rede WiFi
+const char* password = "mamattos"; // Senha da rede WiFi
 
-const char* host = "SEU_HOST_OU_IP"; // Insira o endereço IP ou o host do servidor onde você deseja enviar os dados
-const int port = 80; // Porta do servidor HTTP
+const char* host = "sensores-411d5.firebaseio.com"; // Endereço do Firestore
+const char* apiKey = "AIzaSyBSRAZOYxKdiIH2xDhej8LZOmj6Mk2-CNU"; // Chave da API do Firebase
 
-const int triggerPin = 13; // Pino de trigger do sensor ultrassônico
-const int echoPin = 12; // Pino de eco do sensor ultrassônico
+const int triggerPin = 32; // Pino de trigger do sensor ultrassônico
+const int echoPin = 33; // Pino de eco do sensor ultrassônico
 
 long duration;
 int distance;
-
-WiFiClient client;
 
 void setup() {
   Serial.begin(115200);
@@ -39,7 +38,7 @@ void setup() {
 }
 
 void loop() {
-  // Mede a distância usando o sensor ultrassônico
+  // Mede a distância 
   digitalWrite(triggerPin, LOW);
   delayMicroseconds(2);
   digitalWrite(triggerPin, HIGH);
@@ -48,21 +47,31 @@ void loop() {
   duration = pulseIn(echoPin, HIGH);
   distance = duration * 0.034 / 2;
 
-  // Envia os dados por WiFi
-  if (client.connect(host, port)) {
-    Serial.println("Conectado ao servidor");
-    client.print("GET /update?level=");
-    client.print(distance);
-    client.println(" HTTP/1.1");
-    client.print("Host: ");
-    client.println(host);
-    client.println("Connection: close");
-    client.println();
-    client.stop();
-    Serial.println("Dados enviados com sucesso");
+  // Envia os dados 
+  HTTPClient http;
+
+  String data = "{\"level\": " + String(distance) + "}"; // Dados a serem enviados
+
+  // Monta a URL para o Firestore
+  String url = "https://" + String(host) + "/your-collection.json?auth=" + String(apiKey);
+
+  Serial.println("URL: " + url);
+  Serial.println("Dados: " + data);
+
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+
+  int httpResponseCode = http.POST(data);
+
+  if (httpResponseCode > 0) {
+    String response = http.getString();
+    Serial.println("Resposta do servidor: " + response);
   } else {
-    Serial.println("Falha na conexão com o servidor");
+    Serial.print("Erro na requisição HTTP: ");
+    Serial.println(httpResponseCode);
   }
 
-  delay(5000); // Aguarda 5 segundos antes de enviar novamente
+  http.end();
+
+  delay(5000); // Aguarda 5 segundos 
 }
