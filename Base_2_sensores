@@ -1,0 +1,46 @@
+#define sinal_1 32
+#define eco_1 33
+
+#define sinal_2 18
+#define eco_2 19
+
+bool turno = 1;
+
+void setup() {
+  Serial.begin(115200);
+
+  // Sensor 1
+  pinMode(sinal_1, OUTPUT);
+  pinMode(eco_1, INPUT);
+
+  // Sensor 2
+  pinMode(sinal_2, OUTPUT);
+  pinMode(eco_2, INPUT);
+}
+
+void loop() {
+  long tempo_eco_1, tempo_eco_2;
+
+  if(turno){
+    // Sensor 1 - Emitir pulso
+    digitalWrite(sinal_1, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(sinal_1, LOW);  
+    tempo_eco_1 = pulseIn(eco_1, HIGH);
+    Serial.print("Tempo Eco I: ");
+    Serial.print(tempo_eco_1);
+  } else {
+    // Sensor 2 - Emitir pulso
+    digitalWrite(sinal_2, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(sinal_2, LOW);
+    tempo_eco_2 = pulseIn(eco_2, HIGH);
+    Serial.print(", Tempo Eco II: ");
+    //Serial.print(",");
+    Serial.println(tempo_eco_2);
+  }
+  
+  turno = !turno;  // Alternar entre sensores
+
+  delay(1000);
+}
