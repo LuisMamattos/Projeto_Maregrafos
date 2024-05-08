@@ -1,0 +1,105 @@
+#include <WiFi.h>
+#include <ThingSpeak.h>
+
+const char ssid[] = "Router_Viviane";
+const char password[] = "viviunhas";
+WiFiClient client;
+
+const long CHANNEL = 2530363;
+const char *WRITE_API = "LP2NI58KPQ0CM325";
+
+#define sinal_1 32
+#define eco_1 33
+
+long duration;
+long calibragem = -3;
+long update = 0;
+int contador = 0;
+long tempo_eco_1;
+float distancia = 0;
+int nivel = 0;
+bool primeiraVez = true;
+
+int intervalThingSpeak = 15000; // Intervalo mínimo para escrever no ThingSpeak é de 15 segundos
+unsigned long prevMillisThingSpeak = 0;
+
+void setup() {
+  pinMode(sinal_1, OUTPUT);
+  pinMode(eco_1, INPUT);
+
+  Serial.begin(115200);
+  Serial.println();
+  Serial.println("Envia os dados do sensor para o ThingSpeak usando o ESP32");
+  Serial.println();
+
+  WiFi.mode(WIFI_STA); // Modo Station
+  WiFi.begin(ssid, password); // Inicia a conexão WiFi
+
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(5000);
+  }
+
+  Serial.println("\nConectado");
+
+  ThingSpeak.begin(client); // Inicializa o ThingSpeak
+}
+
+void loop() {
+
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.println("\nDesconectado");
+    delay(5000);
+  }
+  Serial.println("\nConectado");
+
+  digitalWrite(sinal_1, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(sinal_1, LOW);
+  tempo_eco_1 = pulseIn(eco_1, HIGH);
+
+  // if (primeiraVez) {
+  //   duration = tempo_eco_1;
+  //   primeiraVez = false;
+  // } else {
+  //   if (abs(tempo_eco_1 - duration) < 1000) {
+  //     duration = tempo_eco_1;
+  //   } else {
+  //     duration += 1;
+  //   }
+  // }
+  duration = tempo_eco_1;
+
+  distancia = (duration * 0.034 / 2)+(calibragem);
+  nivel = 93 - distancia;
+
+  Serial.print("eco1: ");
+  Serial.println(tempo_eco_1);
+  Serial.print("distancia: ");
+  Serial.println(distancia);
+  Serial.print("nivel: ");
+  Serial.println(nivel);
+  Serial.println("-------------------");
+
+  update = update + distancia;
+  contador++;
+
+  delay(1000);
+
+  if (millis() - prevMillisThingSpeak > intervalThingSpeak) {
+    // Configura os campos com os valores
+    ThingSpeak.setField(1, distancia);
+    ThingSpeak.setField(2, nivel);
+
+    // Escreve no canal do ThingSpeak
+    int x = ThingSpeak.writeFields(CHANNEL, WRITE_API);
+    if (x == 200) {
+      Serial.println("Update realizado com sucesso");
+    } else {
+      Serial.println("Problema no canal - erro HTTP " + String(x));
+      return;
+    }
+
+    prevMillisThingSpeak = millis();
+  }
+}
